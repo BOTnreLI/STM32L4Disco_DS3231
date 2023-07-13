@@ -1,0 +1,13 @@
+main.c:75:9:decToBcd	1
+main.c:80:5:bcdToDec	1
+main.c:85:6:Set_Time	1
+main.c:100:6:Get_Time	1
+main.c:114:7:Get_Temp	1
+main.c:120:6:force_temp_conv	2
+main.c:132:6:send_uart	1
+main.c:142:5:main	1
+main.c:207:6:SystemClock_Config	4
+main.c:258:13:MX_I2C1_Init	4
+main.c:306:13:MX_USART1_UART_Init	2
+main.c:341:13:MX_GPIO_Init	1
+main.c:584:6:Error_Handler	1
