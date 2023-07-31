@@ -38,6 +38,7 @@ typedef struct{
 	uint8_t month;
 	uint8_t year;
 }TIME;
+
 TIME time;
 /* USER CODE END PTD */
 
@@ -142,7 +143,7 @@ void send_uart(char *string)
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-	float TEMP;
+  float TEMP;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -175,13 +176,25 @@ int main(void)
   {
     /* USER CODE END WHILE */
 
-      Get_Time();
+    /* USER CODE BEGIN 3 */
+	  Get_Time();
+	  GPIO_PinState motionSensor_state = HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_14);
+	  char message[32];
+	  char msg[64];
 
+	  if(motionSensor_state == GPIO_PIN_SET){
+		  sprintf(message, "Warning: Motion detected ! \r\n");
+		  send_uart(message);
+	  }else{
+		  sprintf(message, "Normal ! \r\n");
+		  send_uart(message);
+	  }
+
+
+	  HAL_Delay(1000);
       // Read the temperature
 
-      //get_temperature(&temperature);
 
-      char msg[64];
       sprintf(msg, "Time: %02d:%02d:%02d \r\n"
     		  	   "Date: %02d-%02d-20%02d- Day of Week: %02d\r\n",
 				   time.hour, time.minutes, time.seconds, time.dayofmonth, time.month, time.year, time.dayofweek);
@@ -195,7 +208,6 @@ int main(void)
       // Delay for three seconds
       HAL_Delay(3000);
 
-    /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
 }
@@ -495,10 +507,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Alternate = GPIO_AF7_USART3;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : LPS22HB_INT_DRDY_EXTI0_Pin LSM6DSL_INT1_EXTI11_Pin ARD_D2_Pin HTS221_DRDY_EXTI15_Pin
-                           PMOD_IRQ_EXTI12_Pin */
-  GPIO_InitStruct.Pin = LPS22HB_INT_DRDY_EXTI0_Pin|LSM6DSL_INT1_EXTI11_Pin|ARD_D2_Pin|HTS221_DRDY_EXTI15_Pin
-                          |PMOD_IRQ_EXTI12_Pin;
+  /*Configure GPIO pins : LPS22HB_INT_DRDY_EXTI0_Pin LSM6DSL_INT1_EXTI11_Pin HTS221_DRDY_EXTI15_Pin PD2 */
+  GPIO_InitStruct.Pin = LPS22HB_INT_DRDY_EXTI0_Pin|LSM6DSL_INT1_EXTI11_Pin|HTS221_DRDY_EXTI15_Pin|GPIO_PIN_2;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
@@ -508,6 +518,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PD14 */
+  GPIO_InitStruct.Pin = GPIO_PIN_14;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
   /*Configure GPIO pins : VL53L0X_XSHUT_Pin LED3_WIFI__LED4_BLE_Pin */
