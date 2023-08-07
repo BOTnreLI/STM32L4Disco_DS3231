@@ -21,30 +21,18 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "stm32l4xx_hal_i2c.h"
-#include "stm32l4xx_hal_uart.h"
-#include "string.h"
 #include "stdio.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-typedef struct{
-	uint8_t seconds;
-	uint8_t minutes;
-	uint8_t hour;
-	uint8_t dayofweek;
-	uint8_t dayofmonth;
-	uint8_t month;
-	uint8_t year;
-}TIME;
 
 TIME time;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define DS3231_ADDRESS 0xD0
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -57,6 +45,7 @@ I2C_HandleTypeDef hi2c1;
 
 UART_HandleTypeDef huart1;
 
+extern DS3231DrvTypDef DS3231;
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -73,67 +62,9 @@ static void MX_USART1_UART_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 // A function to set the time on the DS3231
-uint8_t decToBcd(int val)
-{
-  return (uint8_t)( (val/10*16) + (val%10) );
-}
+
 // Convert binary coded decimal to normal decimal numbers
-int bcdToDec(uint8_t val)
-{
-  return (int)( (val/16*10) + (val%16) );
-}
 
-void Set_Time (uint8_t sec, uint8_t min, uint8_t hour, uint8_t dow, uint8_t dom, uint8_t month, uint8_t year)
-{
-	uint8_t set_time[7];
-	set_time[0] = decToBcd(sec);
-	set_time[1] = decToBcd(min);
-	set_time[2] = decToBcd(hour);
-	set_time[3] = decToBcd(dow);
-	set_time[4] = decToBcd(dom);
-	set_time[5] = decToBcd(month);
-	set_time[6] = decToBcd(year);
-
-	HAL_I2C_Mem_Write(&hi2c1, DS3231_ADDRESS, 0x00, 1, set_time, 7, 1000);
-}
-
-// A function to read the time from the DS3231
-void Get_Time (void)
-{
-	uint8_t get_time[7];
-	HAL_I2C_Mem_Read(&hi2c1, DS3231_ADDRESS, 0x00, 1, get_time, 7, 1000);
-	time.seconds = bcdToDec(get_time[0]);
-	time.minutes = bcdToDec(get_time[1]);
-	time.hour = bcdToDec(get_time[2]);
-	time.dayofweek = bcdToDec(get_time[3]);
-	time.dayofmonth = bcdToDec(get_time[4]);
-	time.month = bcdToDec(get_time[5]);
-	time.year = bcdToDec(get_time[6]);
-}
-
-// A function to read the temperature from the DS3231
-float Get_Temp (void)
-{
-	uint8_t temp[2];
-	HAL_I2C_Mem_Read(&hi2c1, DS3231_ADDRESS, 0x11, 1, temp, 2, 1000);
-	return ((temp[0])+(temp[1]>>6)/4.0);
-}
-void force_temp_conv (void)
-{
-	uint8_t status=0;
-	uint8_t control=0;
-	HAL_I2C_Mem_Read(&hi2c1, DS3231_ADDRESS, 0x0F, 1, &status, 1, 100);  // read status register
-	if (!(status&0x04))  // if the BSY bit is not set
-	{
-		HAL_I2C_Mem_Read(&hi2c1, DS3231_ADDRESS, 0x0E, 1, &control, 1, 100);  // read control register
-		HAL_I2C_Mem_Write(&hi2c1, DS3231_ADDRESS, 0x0E, 1, (uint8_t *)(control|(0x20)), 1, 100);  // write modified control register with CONV bit as'1'
-	}
-}
-// A function to send a string over UART
-void send_uart(char *string)
-{
-    HAL_UART_Transmit(&huart1, (uint8_t*)string, strlen(string), HAL_MAX_DELAY);  // send message via UART
-}
 /* USER CODE END 0 */
 
 /**
@@ -167,7 +98,7 @@ int main(void)
   MX_I2C1_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-  //Set_Time(45, 45, 13, 6, 9, 7, 23);
+  //DS3231.SetTime(45, 45, 13, 6, 9, 7, 23);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -177,7 +108,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  Get_Time();
+	  DS3231.RetriveTime();
 	  GPIO_PinState motionSensor_state = HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_14);
 	  char message[32];
 	  char msg[64];
@@ -191,17 +122,13 @@ int main(void)
 	  }
 
 
-	  HAL_Delay(1000);
-      // Read the temperature
-
-
       sprintf(msg, "Time: %02d:%02d:%02d \r\n"
     		  	   "Date: %02d-%02d-20%02d- Day of Week: %02d\r\n",
 				   time.hour, time.minutes, time.seconds, time.dayofmonth, time.month, time.year, time.dayofweek);
 
       send_uart(msg);
-      force_temp_conv();
-      TEMP = Get_Temp();
+      DS3231.TemperatureConversion_foreced();
+      TEMP = DS3231.RetriveTemperature();
       sprintf(msg, "Current temperature: %.2f C \r\n\r\n", TEMP);
       send_uart(msg);
 
